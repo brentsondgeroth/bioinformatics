@@ -1,146 +1,63 @@
 '''
 Names:  Brent Gaither
 Program that merges clusters using neighbor joining and outputs the final
-product in Newick format.
+product in Newick format with branch lengths.
 
 Due Date:  02/19/2015
 '''
 
 from __future__ import division
+import collections
 from collections import defaultdict
 from collections import Mapping
 import math
 import sys
 
 '''
-compareSequences- reads in the sequences and compares to find matches, length of sequences,
-mutation type and the GC content. 
+findJukesCantor- Finds the evolutionary distance between sequences using 
+Jukes-Cantor, a one parameter model.
 '''
 
-def compareSequences(alSeq1,alSeq2,choice):
-    #Creates and initializes variables 
-    lenCtr = float(0)   
-    difCtr = float(0)   
-    gapCtr = float(0)   
-    gcSeq1 = float(0)
-    gcSeq2 = float(0)
-    transversion = float(0)     
-    transition = float(0)
-    gcContent1 = float(0)
-    gcContent2 = float(0)
-    S = float(0)
-    V = float(0)
-
-    mutationType = {"GC":'transversion',"CG":'transversion', "AT":'transversion',"TA":'transversion',
-    "AG":'transition',"GA":'transition',"CT":'transition',"TC":'transition',"GT":'transversion',"CA":'transversion',
-    "AC":'transversion',"TG":'transversion'} #Creates a dictionary to determine relationship of mutation
+def findJukesCantor(alSeq1,alSeq2):
+    lenCtr = 0
+    difCtr = 0
+    if alSeq1 == alSeq2:
+        return 0
     for char1, char2 in zip(alSeq1, alSeq2): #traverses through sequences
         if char1 != "-" and char2 != "-":
             lenCtr += 1
             if char1!= char2:
                 difCtr += 1
-                key = char1 + char2
-                if mutationType[key] == 'transition': #Determines relationship between nucleotide mutation
-                    transition +=1
-                else:
-                    transversion +=1
-            if (char1 == "G" or char1 == "C") and char2 !="-": #Adds up the number of Gs and Cs in sequence
-                gcSeq1 += 1
-            if (char2 == "G" or char2 == "C") and char2 !="-":
-                gcSeq2 += 1
-
-    gcContent1 = (gcSeq1 / lenCtr)
-    gcContent2 = (gcSeq2 / lenCtr)
-    V = transversion/lenCtr
-    S = transition / lenCtr
-
-    if choice == '1':
-        return findJukesCantor(difCtr,lenCtr)
-    elif choice == '2':
-        return findKimura(S,V,lenCtr)
-    else:
-        return findTamura(S,V,lenCtr,gcContent1,gcContent2)
-'''
-findJukesCantor- Finds the evolutionary distance between sequences using 
-Jukes-Cantor, a one parameter model.
-'''
-
-def findJukesCantor(difCtr,lenCtr):
     difCtr = difCtr / lenCtr #converts to fraction of substitutions 
     jukes = ((-3.0/4) * math.log(1-(4.0/3*difCtr)))
     return jukes
 
 '''
-findKimura- Finds the evolutionary distance between sequences using 
-Kimura, a two parameter model.
-'''
-
-def findKimura(S,V,lenCtr):
-
-    kimura = ((1.0/2) * math.log(1/(1-(2*S)-V))) + ((1.0/4) * math.log(1/(1-(2*V))))
-    return kimura
-
-'''
-findTamura- Finds the evolutionary distance between sequences using 
-Tamura, a three parameter model.
-'''
-
-def findTamura(S,V,lenCtr,gcContent1,gcContent2):
-
-    C = gcContent1 + gcContent2 - (2 * gcContent1 * gcContent2)
-
-    tamura = -C * math.log(1 - (S/C) - V) - (((1.0/2)* (1-C)) * math.log(1-(2*V)))
-    return tamura
-
-'''
-countSequences- Counts number fasta formatted sequences in the infile
-'''
-
-def countSequences(infile):
-
-    in_FH = open('file3.txt','r')
-    counter=0
-    for line in in_FH:
-        if line[:1] is '>':
-            counter += 1
-    return counter
-
-'''
-readIn- Reads in fasta formatted file into a list 
+readIn- Reads in a fasta formatted file into a list 
 '''
 
 def readIn(infile):
-    sequenceList = [0] * countSequences(infile)
-    sequence = ''
-    i = 0
-    first = True
+    data=''
+    sequenceNames=[]
+    sequenceList=[]
+    line =infile.readline()
+
+    sequenceNames.append(line[1])
     for line in infile:
-        if line[0]== '>' and first != True:
-            print(line)
-            print(sequence)
-            sequenceList[i] = sequence
-            sequence = ''
-            i += 1
+        if line.startswith('>'):
+            sequenceNames.append(line[1])
+            sequenceList.append(data)
+            data=''
         else:
-            line = line.replace('\n', '')
-            line = line.replace('\r', '')
-            sequence = sequence + line
-            first = False
-        sequence = sequence.upper()
-    return sequenceList
-# Builds a reverse copy of a nested dictionary
-def keypaths(nested):
-    for key, value in nested.iteritems():
-        if isinstance(value, Mapping):
-            for subkey, subvalue in keypaths(value):
-                yield[key] + subkey, subvalue
-        else:
-            yield[key], value
+            data= data + line.upper().strip()
+    sequenceList.append(data)
+    return sequenceList,sequenceNames
 
 '''
 findKeys- Used the smallest value and the reverse copy of the nested dictionary
 to find the value and return it's parent and child keys
 '''
+
 def findKeys(nested,value):
     for k,v in nested.items():
         if isinstance(v,dict):
@@ -155,13 +72,14 @@ findSmallest- Finds and returns the shortest distance between sequences
 listed in the matrix
 '''
 
-def findSmallest(clusterDist):
+def findSmallest(transition,clusterNames):
+
     smallest = sys.maxint
-    for k,v in clusterDist.items():
-        for k2,v2 in v.items():
-            if k != k2:
-                if smallest > int(v2) and int(v2) != 0:
-                    smallest = int(v2)
+    for iName  in clusterNames:
+        for jName  in clusterNames:
+            if iName != jName:
+                if smallest > float(transition[iName][jName]) and float(transition[iName][jName]) != 0:
+                    smallest = float(transition[iName][jName])
     return smallest
        
 '''
@@ -169,92 +87,101 @@ singleLinkage- Calculate distances between new cluster and all
 other clusters using single linkage
 '''
 
-def singleLinkage(clusterDist, newCluster, originalDist, clusterNames, reverseCluster):
+def singleLinkage(clusterDist, newCluster, originalDist, clusterNames):
     for cluster in clusterNames:
-        smallestD = max(reverseCluster)
+        smallestD = max(clusterDist)
         for c1 in cluster:
             for c2 in newCluster:
                 if originalDist[c1][c2] < smallestD:
                     smallestD = originalDist[c1][c2]
         clusterDist[newCluster][cluster] = smallestD
         clusterDist[cluster][newCluster] = smallestD
-    return
+    return clusterDist
 
 '''
 calculateTransition- Calculates the transition matrix for a neighbor joining phylogeny.
 '''
 
-def calculateTransition(clusterDist,transition):
-    r = [0] * len(clusterNames)
+def calculateTransition(originalDist,clusterNames):
+    r = collections.defaultdict(float)
+    transition = defaultdict(lambda:defaultdict(float))
     dix = 0
-    for i in range (0, int(numSeq)):
-        for j in range (0, int(numSeq)):
-            dix = dix + int(clusterDist[clusterNames[i]][clusterNames[j]])
+    i =0
+    j = 0
+    for iName  in clusterNames:
+        for jName  in clusterNames:
+            dix = dix + int(originalDist[iName][jName]) #calculate distance between i and j 
             j += 1
-        r[i] = dix / (len(clusterNames) - 2)
+        r[iName] = dix / (len(clusterNames) - 2) #Calculates the r values for the transition matrix
         i +=1
         dix  = 0
-    for i in range (0, int(numSeq)):
-        for j in range (0, int(numSeq)):
-            transition[clusterNames[i]][clusterNames[j]] = int(clusterDist[clusterNames[i]][clusterNames[j]])  - r[i] - r[j]
+    k =0
+    l = 0
+    for iName  in clusterNames:
+        for jName  in clusterNames:
+            transition[iName][jName] = originalDist[iName][jName]  - r[iName] - r[jName] #Fill transition matrix with transition distances 
+            k +=1
+            l+=1
+    return transition, r
 
-def neighborJoining(clusterDist, newCluster, originalDist, clusterNames, reverseCluster):
-    for cluster in clusterNames:
-        dk = (originalDist[clusterNames[shortestI]][clusterNames[shortestD]] + originalDist[clusterNames[shortestJ]][clusterNames[shortestD]] - originalDist[clusterNames[shortestI]][clusterNames[shortestJ]]) /2
+'''
+neighborJoining- Calculates the neighbor joining distances. Does not assume constant rate of evolution/change 
+'''
+
+def neighborJoining(originalDist,newCluster, clusterNames,shortestI,shortestJ,clusterDist):
+    for iName  in clusterNames:
+        for jName  in clusterNames:
+            if iName == jName:
+                clusterDist[iName][jName] = 0
+            else:
+                clusterDist[newCluster][jName] = (float(originalDist[shortestI][iName])) + float(originalDist[shortestJ][jName]) - (float(originalDist[newCluster[0]][newCluster[1]]))/2
+    return clusterDist
+    
+'''
+branchLength- Determines distance from two clusters and their most recent ancestor.
+'''
+
+def branchLength(originalDist,r,shortestI,shortestJ):
+    branchDis = collections.defaultdict(float)
+    branchDis[shortestI] = (originalDist[shortestI][shortestJ] + r[shortestI] - r[shortestJ])/2
+    branchDis[shortestJ]= (originalDist[shortestI][shortestJ] + r[shortestJ] - r[shortestI])/2
+    return branchDis
+
 # main
 
 # Read in data for nested hash structure
-infile1 = open("file2.txt", 'r')
-#infile2 = open('file3.txt', 'r')
 outfile = open("bgwmCh7skillsout.txt", 'w')
+infile = open("file3.txt",'r')
+sequenceList,clusterNames = readIn(infile)
+print("This program uses FASTA formatted sequences to create a phylogenetic tree in newick format using Jukes-Cantor as a distance calculator.")
 
-# sequenceList = readIn(infile2)
-
-numSeq = infile1.readline()
-clusterNames = [0] * int(numSeq)
-distances = [0] * int(numSeq)
-idx = 0
-for line in infile1:
-    clusterNames[idx] = line[0]
-    distances[idx] = line[1:len(line) - 1:1].split()
-    idx += 1
+numClusters = len(clusterNames)# Set flag equal to the total number of clusters
 
 # Build nested hash structures
-originalDist = defaultdict(lambda:defaultdict(int))
-clusterDist = defaultdict(lambda:defaultdict(int))
-transition = defaultdict(lambda:defaultdict(int))
+originalDist = defaultdict(lambda:defaultdict(float))
+clusterDist = defaultdict(lambda:defaultdict(float))
+tempDist = defaultdict(lambda:defaultdict(float))
 
-for i in range (0, int(numSeq)):
-    for j in range (0, int(numSeq)):
-        originalDist[clusterNames[i]][clusterNames[j]] = distances[i][j]
-        clusterDist[clusterNames[i]][clusterNames[j]] = distances[i][j]
-# Step 1:  Cluster
+#fill originalDist with distances calculated from Jukes-Cantor
+for i in range(0,int(numClusters)):
+    for j in range(0,int(numClusters)):
+        originalDist[clusterNames[i]][clusterNames[j]] = round((findJukesCantor(sequenceList[i],sequenceList[j])),10)
+        clusterDist[clusterNames[i]][clusterNames[j]] = round((findJukesCantor(sequenceList[i],sequenceList[j])),10)
 
-# Set flag equal to the total number of clusters
-numClusters = len(clusterNames)
-
-'''
-Create a reverse copy of clusterDist to be passed with
-the shortest distance into findKeys to return the parent
-and child keys of the shortest distance
-'''
-reverseCluster = {}
-for keypath, value in keypaths(clusterDist):
-    reverseCluster.setdefault(value, []).append(keypath)
 
 # Initialize a nested dictionary to build the Newick format output
 newick = defaultdict(lambda:defaultdict(float))
 
-calculateTransition(clusterDist,transition)
-
 while(numClusters > 2):
-    shortestD = findSmallest(clusterDist)
+    
+    transition,r = calculateTransition(originalDist,clusterNames)
+    shortestD = findSmallest(transition,clusterNames)
+
     # Finds keys of smallest value
-    shortestK = findKeys(clusterDist, str(shortestD))
+    shortestK = findKeys(transition, shortestD)
     shortestK = sorted(shortestK)
     shortestI = shortestK[0]
     shortestJ = shortestK[1]
-    print(shortestJ)
 
     '''
     For each cluster pair of a given shortest distance,
@@ -277,16 +204,27 @@ while(numClusters > 2):
     become the child key.
     '''
     myKey = shortestI + shortestJ
-    myValue = '(' + x + ',' + y + ')'
-
+    branchDis = branchLength(originalDist,r,shortestI,shortestJ)
+    #Add in the distances for the branches with branchDis
+    myValue = '(' + x +":" + str(branchDis[shortestI]) + ',' + y +":" + str(branchDis[shortestJ]) + ')'
+  
     newick[myKey][myValue] = 0
     
     # merge clusters I and J
     newCluster = shortestI + shortestJ
+
+    for iName  in clusterNames: #Set the original distances to the new distances 
+        for jName  in clusterNames:
+            originalDist[iName][jName] = clusterDist[iName][jName]
+
+    #Calculate neighbor joining distances
+    clusterDist = neighborJoining(originalDist,newCluster, clusterNames,shortestI,shortestJ,clusterDist)
+
+    #remove the clusters that have been combined 
     clusterNames.remove(shortestI)
     clusterNames.remove(shortestJ)
 
-    # First, remove the child key and values
+    #remove the child key and values
     for k,v in clusterDist.items():
         for k2,v2 in v.items():
             if k2 == shortestI:
@@ -294,9 +232,6 @@ while(numClusters > 2):
             if k2 == shortestJ:
                 del clusterDist[k][k2]
 
-    # Next, merge the 2 clusters
-    #singleLinkage(clusterDist, newCluster, originalDist, clusterNames, reverseCluster)
-    neighborJoining(clusterDist, newCluster, originalDist, clusterNames, reverseCluster)
     clusterNames.append(newCluster)
 
     '''
@@ -309,9 +244,8 @@ while(numClusters > 2):
         if k == shortestJ:
             del clusterDist[k]
 
-    print "merging clusters " + shortestI + " and " + shortestJ
+    print ("merging clusters " + shortestI + " and " + shortestJ)
     outfile.write("merging clusters " + shortestI + " and " + shortestJ + '\n')
-
     numClusters -= 1
 
 # Put child keys from Newick in list, then join list elements as a string
@@ -319,17 +253,14 @@ nFormat = []
 
 for k,v in newick.items():
     for k2,v2 in v.items():
-        nFormat.append(k2)
+        nFormat.append(k2) 
 
 nFormat = ','.join(nFormat)
-
-
-print sorted(clusterNames)
-
+print("merging clusters " + clusterNames[0] + " and " +clusterNames[1])
 # Surround the newick string with a final set of parentheses
-print "(" + nFormat + ")"
+print ("((" + nFormat + ":" + str(branchDis[clusterNames[0]]) + ")" )
 outfile.write(','.join(clusterNames))
-outfile.write("\n(" + nFormat + ")")
+outfile.write("\n((" + nFormat + ":" + str(branchDis[clusterNames[0]]) + ")")
 outfile.close()
 
 

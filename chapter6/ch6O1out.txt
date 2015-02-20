@@ -1,0 +1,6 @@
+Jukes-Cantor evolutionary distance model 
+0.167805291073
+Kimura evolutionary distance model 
+0.168907927586
+Tamura evolutionary distance model 
+0.16892406022

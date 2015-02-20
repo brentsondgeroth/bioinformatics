@@ -1,0 +1,5 @@
+1 CAATT
+  |||||
+1 CAATT
+Match percentage is: 100.0
+The alignment score is: 5
