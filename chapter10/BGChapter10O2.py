@@ -29,11 +29,11 @@ the sequence
 
 def markov (states,currentState, length, ctr,end,path):
 
-	if ctr == length and currentState == end:#End with base case of path with length "length" and ending with "end"
+	if ctr == length and currentState == end and path not in pathList:
 		pathList.append(path)
-	elif currentState == end: #Return if go to end state but not with expected length
-		return
-	elif ctr<length: #Continue to recursively call function until path is made
+	elif currentState == end:
+		return 
+	elif ctr<length:
 		for state in states[currentState]:#Go through each possible state to create each unique path		
 			markov(states,state, length, ctr+1,end,path+state)
 	else:
@@ -125,10 +125,11 @@ emission['X']['G'] = 1
 emission['X']['C'] = 1
 
 
-ctr = 0
+ctr = 1
 pathList = list()
 total = list()
 length = len(sequence)
+#pathList = markov(states,'B',length,ctr,'X','')
 markov(states,'B',length,ctr,'X','')
 
 p = [float(1)] *(len(pathList))#Create list to hold probabilities 
@@ -140,6 +141,7 @@ for path in pathList:
 		total.append(float(transition[previousState][state]) * float(emission[state][sequence[i]]))
 		previousState = state
 		i+=1
+	print(total)
 	for num in total:
 		p[j] *= float(num)
 	j+=1
