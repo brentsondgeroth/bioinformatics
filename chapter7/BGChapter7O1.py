@@ -74,7 +74,7 @@ listed in the matrix
 
 def findSmallest(transition,clusterNames):
 
-    smallest = sys.maxint
+    smallest = 10000
     for iName  in clusterNames:
         for jName  in clusterNames:
             if iName != jName:
@@ -262,5 +262,4 @@ print ("((" + nFormat + ":" + str(branchDis[clusterNames[0]]) + ")" )
 outfile.write(','.join(clusterNames))
 outfile.write("\n((" + nFormat + ":" + str(branchDis[clusterNames[0]]) + ")")
 outfile.close()
-
 

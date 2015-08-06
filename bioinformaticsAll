@@ -1,0 +1,16 @@
+'''
+Brent Gaither 
+Program that combines multiple bioinformatics programs into one large program
+
+'''
+
+import BGChaper10O2.py
+
+BGChaper3O.py needleman = new BGChaper3O.py
+
+
+infile1 = open('ch5sequence1.txt', 'r')
+infile2 = open('ch5sequence2.txt', 'r')
+
+print("HER")
+needleman(infile1,infile2)

@@ -8,10 +8,10 @@ Due Date: 2/5/15
 import math
 
 '''
-readIn- Reads in the files
+readInTrainingSet- Reads in the files for a training set 
 '''
 
-def readIn(infile):
+def readInTrainingSet(infile):
 	bigSeq1 = []
 	bigSeq2 = []
 	matched = ''
@@ -111,7 +111,7 @@ aminoAcidsT = ('A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','
 matchMatrix = createMatrix()
 subMatrix = createMatrix()
 
-bigSeq1, bigSeq2 = readIn(infile1)
+bigSeq1, bigSeq2 = readInTrainingSet(infile1)
 countDict, matchMatrix,dictionary, totalAA = compareSequences (matchMatrix,bigSeq1,bigSeq2,aminoAcidArray)
 subMatrix = createSubMatrix(aminoAcidsT,matchMatrix,dictionary,totalAA,countDict)
 

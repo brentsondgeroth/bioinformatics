@@ -1,5 +1,5 @@
 '''
-Brent Gaither Matt Obzera
+Brent Gaither 
 This program finds possible genes in a sequence for eukaryotes and prokaryotes.
 
 Due Date 3/2/2015

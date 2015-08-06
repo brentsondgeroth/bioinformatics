@@ -1,0 +1,6 @@
+merging clusters E and F
+merging clusters A and B
+merging clusters C and EF
+merging clusters AB and D
+CEF,ABD
+(((C:-0.5,(E:0.138037823,F:0.138037823):0.5),((A:0.10952191765,B:0.10952191765):0.366233506625,D:0.366233506625):0.0)
