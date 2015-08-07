@@ -139,7 +139,9 @@ def geneProbablity ():
 	userFile = raw_input ("Enter the file you wish to use: ")
 	infile = open(userFile,'r')
 
-	sequence = bioToolsM.readIn(infile)
+	sequence,fileName = bioToolsM.readIn(infile)
+	if sequence == 0:
+		return
 
 	organism = int(raw_input("Kingdom of gene prokaryote(1) eukaryote(2): ")) #User inputs
 	orfSize = int(raw_input("Input minimum size of ORF in nucleotides: "))
@@ -155,9 +157,11 @@ def geneProbablity ():
 	if organism == 2:
 		genesFound,found = bioToolsM.findEukaryote(sequence,orfSize,stopCodons)
 	if found:
+		print("Results for " + fileName)
 		for i in range(0,len(genesFound)):
 			print(genesFound[i])
 	else:
+		print("Results for " + fileName)
 		print("No genes found")
 '''
 Description: This program uses a Hidden Markov model to calculate the probability of a 
@@ -168,7 +172,7 @@ def markovModel ():
 	userFile = raw_input ("Enter the file you wish to use: ")
 	infile = open(userFile,'r')
 
-	sequence = bioToolsM.readIn(infile)
+	sequence,fileName = bioToolsM.readIn(infile)
 
 	#Create nested hash tables
 	transition = defaultdict(lambda:defaultdict(float))
@@ -293,6 +297,7 @@ def markovModel ():
 	charPerLine = 50
 	startSite = max([x for x in p if x !=0])
 
+	print("Results for " + fileName)
 	# Prints the alignment with a limit of 50 characters per line.
 	for line in range(line,len(sequence),charPerLine):
 	    print(str(nucleotideCount) + " " + pathList[(p.index(startSite))][line:line + charPerLine])
@@ -308,121 +313,125 @@ def needleman ():
 	print("Align DNA sequences from two FASTA files")
 	userFile1 = raw_input ("Enter the first file you wish to use: ")
 	userFile2 = raw_input ("Enter the second file you wish to use: ")
-	infile1 = open(userFile,'r')
-	infile2 = open(userFile,'r')
+
+	infile1 = open(userFile1, 'r')
+	infile2 = open(userFile2, 'r')
 
 	outfile = open('needlemanOut.txt', 'w')
-	s1 = bioToolsM.readIn(infile1)
-	s2 = bioToolsM.readIn(infile2)
+	s1,fileName1 = bioToolsM.readIn(infile1)
+	s2,fileName2 = bioToolsM.readIn(infile2)
+	if s1 != '0' and s2 != '0': #Ensure files are in FASTA format 
+		temp = ""
+		if (len(s1) > len(s2)): #ensure long sequence is s2
+		    temp = s1
+		    s1 = s2
+		    s2 = temp
 
-	temp = ""
-	if (len(s1) > len(s2)): #ensure long sequence is s2
-	    temp = s1
-	    s1 = s2
-	    s2 = temp
+		#Initialize matrix and prompt use for score preferences
+		N = len(s1)
+		M = len(s2)
+		connectors = ''
+		matrix = ''
+		matrix = list(matrix)
+		matrix = [[0 for col in range(M+1)] for row in range(N+1)]
+		print("This program aligns DNA sequences with global and semi global options.")
+		gap = raw_input("Please enter gap score: ")
+		misMatch = raw_input("Please enter mismatch score: ")
+		match = raw_input("Please enter match score: ")
+		alignment = raw_input("[G]lobal or [S]emi global alignment or [L]ocal: ")
+		alignment = alignment.upper()
 
-	#Initialize matrix and prompt use for score preferences
-	N = len(s1)
-	M = len(s2)
-	connectors = ''
-	matrix = ''
-	matrix = list(matrix)
-	matrix = [[0 for col in range(M+1)] for row in range(N+1)]
-	print("This program aligns DNA sequences with global and semi global options.")
-	gap = raw_input("Please enter gap score: ")
-	misMatch = raw_input("Please enter mismatch score: ")
-	match = raw_input("Please enter match score: ")
-	alignment = raw_input("[G]lobal or [S]emi global alignment or [L]ocal: ")
-	alignment = alignment.upper()
+		if alignment == 'G':
+			alignmentType = "Globally"
+		elif alignment == 'S':
+			alignmentType = "Semi Globally"
+		else:
+			alignmentType = "Locally"
 
-	if alignment == 'G':
-		alignmentType = "Globally"
-	elif alignment == 'S':
-		alignmentType = "Semi Globally"
+		bioToolsM.buildMatrix(matrix,alignment,gap,misMatch,match,N,M,s1,s2)
+		#step 2 create directional string
+		dString = ''
+		maxValue = ''
+		if(alignment == 'G' or alignment == 'S'):
+		    dString = bioToolsM.buildDirectional(matrix, N, M, gap,alignment)
+		else:   
+		    maxValue = max([max(row) for row in matrix]) #Find the best alignment in matrix
+		    for rowIdx, rowValue in enumerate(matrix):
+		        if max(rowValue) == maxValue:
+		            maxRowIdx = rowIdx
+		            maxColIdx = rowValue.index(max(rowValue))
+		            N = maxRowIdx
+		            M = maxColIdx
+		            dString = bioToolsM.buildDirectional(matrix, N, M, gap,alignment)
+		#step 3 Build alignment using directional strings
+		seq1Pos = N-1
+		seq2Pos = M-1
+		dirPos = 0
+		alSeq1 = ''
+		alSeq2 = ''
+		alignmentScore = 0
+		matrixOut = ''
+
+		while(dirPos < len(dString)):
+		        
+		    if(dString[dirPos] == "D"): #Align sequence for match
+		        alSeq1 = s1[seq1Pos] + alSeq1
+		        alSeq2 = s2[seq2Pos] + alSeq2
+		        seq1Pos = seq1Pos - 1
+		        seq2Pos = seq2Pos - 1
+		    elif(dString[dirPos] == "V"):#Place a space for a gap
+		        alSeq1 = s1[seq1Pos] + alSeq1
+		        alSeq2 = '-' + alSeq2
+		        seq1Pos = seq1Pos - 1
+		    else:
+		        alSeq1 = '-' + alSeq1 #Place a space for a gap
+		        alSeq2 = s2[seq2Pos] + alSeq2
+		        seq2Pos = seq2Pos -1
+
+		    dirPos = dirPos + 1
+
+		alSeq1List = list(alSeq1)
+		alSeq2List = list(alSeq2)
+
+		for char1, char2 in zip(alSeq1List, alSeq2List):
+		    if char1 == char2:
+		        connectors = connectors + "|" #Create list for relationship between sequences
+		        alignmentScore = alignmentScore + 1
+
+		    else:
+		        if char1 == "-" or char2 == "-":
+		            connectors = connectors + " "
+		        else:
+		            connectors = connectors + "."
+
+		line = 0
+		nucleotideCount = 1
+		charPerLine = 50
+
+		print("Results for " + fileName1 + " and " + fileName2)
+		# Prints the alignment with a limit of 50 characters per line.
+		for line in range(line,len(alSeq1),charPerLine):
+		    print(str(nucleotideCount) + " " + alSeq1[line:line + charPerLine])
+		    outfile.write(str(nucleotideCount) + " " + alSeq1[line:line + charPerLine]+ '\n')
+		    print(len(str(nucleotideCount)) * " " + " " + connectors[line:line + charPerLine])
+		    outfile.write(len(str(nucleotideCount)) * " " + " " + connectors[line:line + charPerLine]+ '\n')
+		    print(str(nucleotideCount) + " " + alSeq2[line:line+charPerLine])
+		    outfile.write(str(nucleotideCount) + " " + alSeq2[line:line+charPerLine])
+		    nucleotideCount = nucleotideCount + charPerLine
+		print("Alinged " + alignmentType)
+		print("Match percentage is: " + str(alignmentScore/float(len(alSeq1))*100))
+		outfile.write("\nMatch percentage is: " + str(alignmentScore/float(len(alSeq1))*100) + '\n')
+		print("The alignment score is: " + str(matrix[N][M]))
+		outfile.write("The alignment score is: " + str(matrix[N][M])+ '\n' )
+		matrixOut = raw_input("Would you like to print the matrix? (1 yes, 2 no) ")
+		if (matrixOut == "1"):
+			bioToolsM.printMatrix(matrix,outfile)
+		dStringOut = raw_input("Would you like to print the path string? (1 yes, 2 no) ")
+		if (dStringOut == "1"):
+		    print (dString)
+		    outfile.write('\n' + dString)
 	else:
-		alignmentType = "Locally"
-
-	bioToolsM.buildMatrix(matrix,alignment,gap,misMatch,match,N,M,s1,s2)
-	#step 2 create directional string
-	dString = ''
-	maxValue = ''
-	if(alignment == 'G' or alignment == 'S'):
-	    dString = bioToolsM.buildDirectional(matrix, N, M, gap,alignment)
-	else:   
-	    maxValue = max([max(row) for row in matrix]) #Find the best alignment in matrix
-	    for rowIdx, rowValue in enumerate(matrix):
-	        if max(rowValue) == maxValue:
-	            maxRowIdx = rowIdx
-	            maxColIdx = rowValue.index(max(rowValue))
-	            N = maxRowIdx
-	            M = maxColIdx
-	            dString = bioToolsM.buildDirectional(matrix, N, M, gap,alignment)
-	#step 3 Build alignment using directional strings
-	seq1Pos = N-1
-	seq2Pos = M-1
-	dirPos = 0
-	alSeq1 = ''
-	alSeq2 = ''
-	alignmentScore = 0
-	matrixOut = ''
-
-	while(dirPos < len(dString)):
-	        
-	    if(dString[dirPos] == "D"): #Align sequence for match
-	        alSeq1 = s1[seq1Pos] + alSeq1
-	        alSeq2 = s2[seq2Pos] + alSeq2
-	        seq1Pos = seq1Pos - 1
-	        seq2Pos = seq2Pos - 1
-	    elif(dString[dirPos] == "V"):#Place a space for a gap
-	        alSeq1 = s1[seq1Pos] + alSeq1
-	        alSeq2 = '-' + alSeq2
-	        seq1Pos = seq1Pos - 1
-	    else:
-	        alSeq1 = '-' + alSeq1 #Place a space for a gap
-	        alSeq2 = s2[seq2Pos] + alSeq2
-	        seq2Pos = seq2Pos -1
-
-	    dirPos = dirPos + 1
-
-	alSeq1List = list(alSeq1)
-	alSeq2List = list(alSeq2)
-
-	for char1, char2 in zip(alSeq1List, alSeq2List):
-	    if char1 == char2:
-	        connectors = connectors + "|" #Create list for relationship between sequences
-	        alignmentScore = alignmentScore + 1
-
-	    else:
-	        if char1 == "-" or char2 == "-":
-	            connectors = connectors + " "
-	        else:
-	            connectors = connectors + "."
-
-	line = 0
-	nucleotideCount = 1
-	charPerLine = 50
-
-	# Prints the alignment with a limit of 50 characters per line.
-	for line in range(line,len(alSeq1),charPerLine):
-	    print(str(nucleotideCount) + " " + alSeq1[line:line + charPerLine])
-	    outfile.write(str(nucleotideCount) + " " + alSeq1[line:line + charPerLine]+ '\n')
-	    print(len(str(nucleotideCount)) * " " + " " + connectors[line:line + charPerLine])
-	    outfile.write(len(str(nucleotideCount)) * " " + " " + connectors[line:line + charPerLine]+ '\n')
-	    print(str(nucleotideCount) + " " + alSeq2[line:line+charPerLine])
-	    outfile.write(str(nucleotideCount) + " " + alSeq2[line:line+charPerLine])
-	    nucleotideCount = nucleotideCount + charPerLine
-	print("Alinged " + alignmentType)
-	print("Match percentage is: " + str(alignmentScore/float(len(alSeq1))*100))
-	outfile.write("\nMatch percentage is: " + str(alignmentScore/float(len(alSeq1))*100) + '\n')
-	print("The alignment score is: " + str(matrix[N][M]))
-	outfile.write("The alignment score is: " + str(matrix[N][M])+ '\n' )
-	matrixOut = raw_input("Would you like to print the matrix? (1 yes, 2 no) ")
-	if (matrixOut == "1"):
-		bioToolsM.printMatrix(matrix,outfile)
-	dStringOut = raw_input("Would you like to print the path string? (1 yes, 2 no) ")
-	if (dStringOut == "1"):
-	    print (dString)
-	    outfile.write('\n' + dString)
+		print("Not FASTA formatted files")
 '''
 Description: This program uses a training set to create a substitution matrix. Use sequences 
 separated by new lines to differentiate sequences. Do not include headers for sequences. 
@@ -431,7 +440,7 @@ Place sequences one after the other to be read in as pairs.
 def substitutionMatrix():
 
 	userFile = raw_input ("Enter the file for the training set you wish to use: ")
-	infile = open(userFile,'r')
+	infile = userFile
 	outfile = open('substitutionMatrix.txt', 'w')
 
 	aminoAcids  = ("0,A,R,N,D,C,Q,E,G,H,I,L,K,M,F,P,S,T,W,Y,V") # amino acids used to create matrix
@@ -442,7 +451,7 @@ def substitutionMatrix():
 	matchMatrix = bioToolsM.createMatrix(aminoAcidArray)
 	subMatrix = bioToolsM.createMatrix(aminoAcidArray)
 
-	bigSeq1, bigSeq2 = bioToolsM.readInTrainingSet(infile1)
+	bigSeq1, bigSeq2 = bioToolsM.readInTrainingSet(infile)
 	countDict, matchMatrix,dictionary, totalAA = bioToolsM.compareSequences(matchMatrix,bigSeq1,bigSeq2,aminoAcidArray)
 	subMatrix = bioToolsM.createSubMatrix(aminoAcidsT,matchMatrix,dictionary,totalAA,countDict,subMatrix)
 

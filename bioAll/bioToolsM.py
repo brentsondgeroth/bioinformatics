@@ -13,14 +13,17 @@ readIn- Reads in a FASTA formatted file
 '''
 
 def readIn (infile):
-	infile.readline()#Read first line of Fasta formatted filed
+	fileName = infile.readline()#Read first line of Fasta formatted filed
 	sequence = ""
-	for line in infile:#Read in remaining data in Fasta file
-		line.replace("\n","")
-		line.replace("\r","")
-		sequence = sequence + line
-	sequence = sequence.upper()
-	return sequence
+	if fileName[0] == '>':
+		for line in infile:#Read in remaining data in Fasta file
+					line.replace("\n","")
+					line.replace("\r","")
+					sequence = sequence + line
+					sequence = sequence.upper()
+					return sequence, fileName
+	else:
+		return '0',fileName #return 0 for non-FASTA file
 
 '''
 readInList- Reads in a fasta formatted file into a list 
@@ -50,7 +53,7 @@ def readInTrainingSet(infile):
 	bigSeq1 = []
 	bigSeq2 = []
 	matched = ''
-	with open('ecoliTrainSet.txt') as f: #Opens and closes training set
+	with open(infile,'r') as f: #Opens and closes training set
 		for line in f:
 			sequence1 = infile.readline()
 			sequence2 = infile.readline()

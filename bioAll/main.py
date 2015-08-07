@@ -1,10 +1,11 @@
 
 import bioToolsP
-
+import os
 
 pickAgain = True
 
-print("This program has 5 bioinformatics tools to use. The needleman wunch tool aligns " +
+os.system("clear")
+print("This program has 5 bioinformatics tools to use. \nThe needleman wunch tool aligns " +
 	"DNA sequences globally or semi globally or locally. The gene Probablity tool gives "
 	+ "the probability that a eukaryotic or prokaryotic sequence is a gene. The substitution matrix "+
 	"tool creates a matrix that gives the probablity of nucleotides aligning with each other in a substitution." + 
