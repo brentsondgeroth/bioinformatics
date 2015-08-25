@@ -1,7 +1,0 @@
-1 CCATGATGGCAACGTGCATGATGCGCAACGTGCATGA-------------
-  |||||||||||||||||||||||||||||||||||||             
-1 CCATGATGGCAACGTGCATGATGCGCAACGTGCATGACGTGCATGACGTG51 -----
-        
-51 CATGA
-Match percentage is: 67.2727272727
-The alignment score is: 37
