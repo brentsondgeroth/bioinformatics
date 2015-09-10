@@ -10,6 +10,18 @@ from random import randint
 from collections import defaultdict
 import operator
 
+'''
+readIn
+'''
+def readIn(infile):
+	title = infile.readline()#Read first line of Fasta formatted filed
+	sequence = ""
+	for line in infile:#Read in remaining data in Fasta file
+		line.replace("\n","")
+		line.replace("\r","")
+		sequence = sequence + line
+	return sequence,title
+
 
 '''
 findBiggest- Find the biggest value in a nested dictionary
@@ -107,19 +119,16 @@ fragMin = int(input("Input minimum fragment size: "))
 fragMax = int(input("Input maximum fragment size: "))
 fold = int(input("Input minimum coverage fold: "))
 
-title = infile.readline()#Read first line of Fasta formatted filed
-sequence = ""
-for line in infile:#Read in remaining data in Fasta file
-	line.replace("\n","")
-	line.replace("\r","")
-	sequence = sequence + line
+sequence, title = readIn(infile)
 
 coverage=[0] * len(sequence) #Holds coverage count of nucleotides
 numFrags = 0
 frags = [] #Create list of fragments
 
 while(not coverageMet(coverage,fold)): #Continue until the coverage is met
-	randLength = randint(fragMin,fragMax) 
+	randLength = randint(fragMin,fragMax)
+	if randLength > len(sequence):
+		randLength = len(sequence)
 	randStart = randint(0,len(sequence)-randLength)
 	newFrag = (sequence[randStart:randStart+randLength])#Creates random fragment of the sequence 
 	frags.append(newFrag) 
