@@ -23,6 +23,33 @@ def readIn(infile):
 	return sequence,title
 
 
+def createFrag(fragMin, fragMax, sequence):
+	
+	coverage= [0] * len(sequence)
+	frags = [] #Create list of fragments
+	numFrags = 0
+	while(not coverageMet(coverage,fold)): #Continue until the coverage is met
+		randLength = randint(fragMin,fragMax)
+		if randLength > len(sequence):
+			randLength = len(sequence)
+		randStart = randint(0,len(sequence)-randLength)
+		newFrag = (sequence[randStart:randStart+randLength])#Creates random fragment of the sequence 
+		frags.append(newFrag) 
+		numFrags +=1
+		for i in range(randStart,randStart+randLength):
+			coverage[i] += 1 #Increase cover 
+	return frags
+
+'''
+Ensure the new frag is not a substring of an old frag and an old frag is not a substring of the new frag
+'''
+def removeDuplicateFrags(frags):
+	checkFragList = list()
+	for fragCheck in frags:
+		if all(fragCheck not in frag for frag in checkFragList) and all(frag not in fragCheck for frag in checkFragList):
+			checkFragList.append(fragCheck)
+	return checkFragList
+
 '''
 findBiggest- Find the biggest value in a nested dictionary
 '''
@@ -82,6 +109,31 @@ def createDict(frags):
 				fragDict[frags.index(frag2)][frags.index(frag1)] = overlap
 	return fragDict
 
+def getBiggestOverLap(frags):
+
+	fragDict = createDict(frags)
+	prefix = ()
+	suffix = ()
+	suffixList = list()
+	prefixList = list()
+
+	while len(prefixList)+1 < len(frags):
+		maxValue = findBiggest(fragDict,frags)
+		if maxValue == 0:#Makes sure there are sequences that overlap at one point
+			break
+		#finds biggest overlap in the list
+		keys = findKeys(fragDict,maxValue)
+		prefix = keys[0]
+		suffix = keys[1]
+		print keys
+		prefixList.append(prefix)
+		suffixList.append(suffix)
+		for k,v in fragDict.items():
+			for k2,v2 in v.items():
+				if k2 == (suffix):
+					del fragDict[k][k2]
+		del fragDict[prefix]
+	return createAlignedFrag(prefixList, suffixList, suffix, frags)
 '''
 findOverlap- Finds the overlap between two sequences and returns the combined sequence(contig)
 and the overlap.
@@ -111,92 +163,56 @@ def findOverlap(frag1,frag2):
 	#end while
 	return contig,overlap,checker
 
+def createAlignedFrag(prefixList, suffixList, suffix, frags):
+
+	firstNode = [item for item in prefixList if item not in suffixList]
+
+	sequenceList = [0] * len(firstNode)
+
+
+	for i in range(0,len(firstNode)): #Creates multiple fragments if no optimal solution exists 
+		start = firstNode[i] 
+
+		suffixPointer = prefixList[0]
+		prefixPointer = start
+		fullSequence = frags[start]
+
+		while suffixPointer in prefixList: #Make sure there is a pointer to the next prefix if not end
+			suffixPointer = suffixList[prefixList.index(prefixPointer)]
+			suffix = frags[suffixPointer]
+			fullSequence,overlap,checker = findOverlap(fullSequence,suffix)
+			prefixPointer = suffixPointer
+		sequenceList[i] = fullSequence
+		#end while
+	return firstNode, sequenceList, fullSequence
+def printSequence(frags, firstNode, title, fullSequence, sequenceList):
+	print("Fragments for sequence...")
+	print(frags)
+
+	if len(firstNode) == 1: #Make sure there is 1 starting position
+		print(title + "Aligned sequence:")
+		print(fullSequence)
+	else:
+		print(title + "No optimal solution fragments of:") 
+		for i in range(0,len(firstNode)):
+			print("Fragment " + str(i +1) + " " + sequenceList[i])
 #Main
 infile = open("file.txt",'r')
 
 #Get user input for parameters
-fragMin = int(input("Input minimum fragment size: "))
-fragMax = int(input("Input maximum fragment size: "))
-fold = int(input("Input minimum coverage fold: "))
+fragMin = int(raw_input("Input minimum fragment size: "))
+fragMax = int(raw_input("Input maximum fragment size: "))
+fold = int(raw_input("Input minimum coverage fold: "))
 
 sequence, title = readIn(infile)
 
-coverage=[0] * len(sequence) #Holds coverage count of nucleotides
-numFrags = 0
-frags = [] #Create list of fragments
+frags = createFrag(fragMin, fragMax, sequence)
 
-while(not coverageMet(coverage,fold)): #Continue until the coverage is met
-	randLength = randint(fragMin,fragMax)
-	if randLength > len(sequence):
-		randLength = len(sequence)
-	randStart = randint(0,len(sequence)-randLength)
-	newFrag = (sequence[randStart:randStart+randLength])#Creates random fragment of the sequence 
-	frags.append(newFrag) 
-	numFrags +=1
-	for i in range(randStart,randStart+randLength):
-		coverage[i] += 1 #Increase cover 
-#end while
+frags = removeDuplicateFrags(frags)
 
-newFragmentList = list() #List to check for substrings
+firstNode, sequenceList, fullSequence = getBiggestOverLap(frags)
 
-#Ensure the new frag is not a substring of an old frag and an old frag is not a substring of the new frag
-for fragCheck in frags:
-	if all(fragCheck not in frag for frag in newFragmentList) and all(frag not in fragCheck for frag in newFragmentList):
-		newFragmentList.append(fragCheck)
-
-frags = newFragmentList#Set list with all substrings removed back to frags
-
-fragDict = createDict(frags)
-prefix = ()
-suffix = ()
-suffixList = list()
-prefixList = list()
-
-while len(prefixList)+1 < len(frags):
-	maxValue = findBiggest(fragDict,frags)
-	if maxValue == 0:#Makes sure there are sequences that overlap at one point
-		break
-	#finds biggest overlap in the list
-	keys = findKeys(fragDict,maxValue)
-	prefix = keys[0]
-	suffix = keys[1]
-
-	prefixList.append(prefix)
-	suffixList.append(suffix)
-	for k,v in fragDict.items():
-		for k2,v2 in v.items():
-			if k2 == (suffix):
-				del fragDict[k][k2]
-	del fragDict[prefix]
-#end while
-
-#Find what is in prefixlist and not in suffix list to start the sequence 
-firstNode = [item for item in prefixList if item not in suffixList]
-print("Fragments for sequence...")
-print(frags)
-sequenceList = [0] * len(firstNode)
-for i in range(0,len(firstNode)): #Creates multiple fragments if no optimal solution exists 
-	start = firstNode[i] 
-
-	suffixPointer = prefixList[0]
-	prefixPointer = start
-	fullSequence = frags[start]
-
-	while suffixPointer in prefixList: #Make sure there is a pointer to the next prefix if not end
-		suffixPointer = suffixList[prefixList.index(prefixPointer)]
-		suffix = frags[suffixPointer]
-		fullSequence,overlap,checker = findOverlap(fullSequence,suffix)
-		prefixPointer = suffixPointer
-	sequenceList[i] = fullSequence
-	#end while
-
-if len(firstNode) == 1: #Make sure there is 1 starting position
-	print(title + "Aligned sequence:")
-	print(fullSequence)
-else:
-	print(title + "No optimal solution fragments of:") 
-	for i in range(0,len(firstNode)):
-		print("Fragment " + str(i +1) + " " + sequenceList[i])
+printSequence(frags, firstNode, title, fullSequence, sequenceList)
 
 
 

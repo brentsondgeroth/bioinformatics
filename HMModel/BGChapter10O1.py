@@ -38,6 +38,32 @@ def markov (states,currentState, length, ctr,end,path):
 			markov(states,state, length, ctr+1,end,path+state)
 	else:
 		return
+
+def calculateProbability(pathList):
+	probability = [float(1)] *(len(pathList))#Create list to hold probabilities 
+	j = 0
+	for path in pathList:
+		previousState = 'W'#Set first previous state to sequence start
+		i = 0
+		for state in path:#multiply emission and transition values for total probability of a path
+			total.append(float(transition[previousState][state]) * float(emission[state][sequence[i]]))
+			previousState = state
+			i+=1
+		for num in total:
+			probability[j] *= float(num)
+		j+=1
+		del total[:]
+	return probability
+def caclulateLog(probability):
+	k = 0
+	for num in probability:#Calculate log of all probabilities
+		if num!=0:
+			probability[k] = math.log(probability[k])
+		else:
+			probability[k] = 0
+		k+=1
+	return probability
+
 #main
 infile = open("file1.txt",'r')
 
@@ -131,30 +157,14 @@ total = list()
 length = len(sequence)
 markov(states,'B',length,ctr,'X','')
 
-p = [float(1)] *(len(pathList))#Create list to hold probabilities 
-j = 0
-for path in pathList:
-	previousState = 'W'#Set first previous state to sequence start
-	i = 0
-	for state in path:#multiply emission and transition values for total probability of a path
-		total.append(float(transition[previousState][state]) * float(emission[state][sequence[i]]))
-		previousState = state
-		i+=1
-	for num in total:
-		p[j] *= float(num)
-	j+=1
-	del total[:]
 
-k = 0
-for num in p:#Calculate log of all probabilities
-	if num!=0:
-		p[k] = math.log(p[k])
-	else:
-		p[k] = 0
-	k+=1
+probability = calculateProbability(pathList)
 
-for i in range(0,len(pathList)):#Prints all possible paths
-	print(pathList[i])
+probability = caclulateLog(probability)
+
+
+# for i in range(0,len(pathList)):#Prints all possible paths
+# 	print(pathList[i])
 
 print("W = start of sequence, A = alpha Exon, E = internal exon, S,P splice donor sites," +
 	"C,R splice acceptor site, I = internal intron FGH = first ATG, XYZ = terminal nucleotides of terminal exon")
@@ -163,10 +173,10 @@ print("Top sequence is the path list for the most likely eukaryotic start sequen
 line = 0
 nucleotideCount = 1
 charPerLine = 50
-startSite = max([x for x in p if x !=0])
+startSite = max([x for x in probability if x !=0])
 
 # Prints the alignment with a limit of 50 characters per line.
 for line in range(line,len(sequence),charPerLine):
-    print(str(nucleotideCount) + " " + pathList[(p.index(startSite))][line:line + charPerLine])
+    print(str(nucleotideCount) + " " + pathList[(probability.index(startSite))][line:line + charPerLine])
     print(str(nucleotideCount) + " " + sequence[line:line+charPerLine])
     nucleotideCount = nucleotideCount + charPerLine

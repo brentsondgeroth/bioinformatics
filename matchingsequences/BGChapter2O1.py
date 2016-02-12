@@ -7,13 +7,23 @@ Due Date: 1/20/15
 '''
 import sys
 
+def readInFile(infile):
+    sequence = ""
+    infile.readline()  # bypass > header line
+    for line in infile:
+        line = line.replace('\n', '')
+        sequence = sequence + line
+        sequence = sequence.upper()
+    infile.close()
+    return sequence
+
+
 '''
     comparison
     takes in two sequences then compares them looking for differences
     if there are errors the position and error is written out to a file
 '''
 def comparison(seq1,seq2):
-    outfile = open('ch2sk1out.txt', 'w')
         
     counterComp = 0 #
 
@@ -28,69 +38,49 @@ def comparison(seq1,seq2):
         print(seq2)
         print("Sequences are identical length with " + str(counterComp) + " matches out of " 
             + str(len(seq1)) + " nucleotides")
-        outfile.write(seq1 + " " + str(iterator+1) + " " + seq2)
-    outfile.close()
     '''
     comparisonUnequal
     takes in two sequences then compares them looking for differences and 
     best fit for deletions. 
     '''
 def comparisonUnequal(seq1,seq2):
-    outfile = open('ch2sk1out.txt', 'w')
     difference = 0
     deletion =''
     bestFit = ''
     bestFit = list(bestFit)
     counter = 0
-    if(len(seq1) > len(seq2)):
-        difference = len(seq1) - len(seq2)
-        totalLength = len(seq1)
-        shortSeq = len(seq2)
+    if(len(seq1) < len(seq2)):
+        seq1, seq2 = switchSequences(seq1,seq2)
 
-        #create spaces for deletion
-        for i in range(0,difference):
-            deletion = deletion + '-'   
+    difference = len(seq1) - len(seq2)
+    shortSeq = len(seq2)
 
-        #iterate through sequence moving deletion down each nucleotide
-        for iterator in range(0,shortSeq+1):
-            counter = 0 #resets counter to 0
-            newSeq2 = seq2[0:iterator] + deletion + seq2[iterator:shortSeq] #move in deletion into iterator position
-            #count number of matching nucleotides put in list
-            for i in range(0,shortSeq+1):
-                    if seq1[i] == newSeq2[i]:
-                        counter = int(counter)+ 1
-            bestFit.append(int(counter)) #add number of matching nucleotides to list
-        print("The best matching sequence is...")
-        print(seq1)
-        print(seq2[0:bestFit.index(max(bestFit))] + deletion + seq2[bestFit.index(max(bestFit)):shortSeq])
-        print("There are " + str(max(bestFit)) + " matching nucleotides")
-        print("A deletion of " + str(difference) + " nucleotide(s) occurred at nucleotide(s) " 
-            + str(bestFit.index(max(bestFit))+1) + "-"+ str(bestFit.index(max(bestFit))+difference))
-    else:
-        difference = len(seq2) - len(seq1)
-        totalLength = len(seq2)
-        shortSeq = len(seq1)
+    #create spaces for deletion
+    for i in range(0,difference):
+        deletion = deletion + '-'   
 
-        #create spaces for deletion
-        for i in range(0,difference):
-            deletion = deletion + '-'   
+    #iterate through sequence moving deletion down each nucleotide
+    for iterator in range(0,shortSeq+1):
+        counter = 0 #resets counter to 0
+        newSeq2 = seq2[0:iterator] + deletion + seq2[iterator:shortSeq] #move in deletion into iterator position
+        #count number of matching nucleotides put in list
+        for i in range(0,shortSeq+1):
+            if seq1[i] == newSeq2[i]:
+                counter = int(counter)+ 1
+        bestFit.append(int(counter)) #add number of matching nucleotides to list
+    print("The best matching sequence is...")
+    print(seq1)
+    print(seq2[0:bestFit.index(max(bestFit))] + deletion + seq2[bestFit.index(max(bestFit)):shortSeq])
+    print("There are " + str(max(bestFit)) + " matching nucleotides")
+    print("A deletion of " + str(difference) + " nucleotide(s) occurred at nucleotide(s) " 
+        + str(bestFit.index(max(bestFit))+1) + "-"+ str(bestFit.index(max(bestFit))+difference))
 
-        #iterate through sequence moving deletion down each nucleotide
-        for iterator in range(0,shortSeq+1):
-            counter = 0 #resets counter to 0
-            newSeq2 = seq2[0:iterator] + deletion + seq2[iterator:shortSeq] #move in deletion into iterator position
-            #count number of matching nucleotides put in list
-            for i in range(0,shortSeq+1):
-                    if seq2[i] == newSeq2[i]:
-                        counter = int(counter)+ 1
-            bestFit.append(int(counter)) #add number of matching nucleotides to list
-        print("The best matching sequence is...")
-        print(seq1)
-        print(seq2[0:bestFit.index(max(bestFit))] + deletion + seq2[bestFit.index(max(bestFit)):shortSeq])
-        print("There are " + str(max(bestFit)) + " matching nucleotides")
-        print("An insertion of " + str(difference) + " nucleotide(s) occurred at nucleotide(s) " 
-            + str(bestFit.index(max(bestFit))+1) + "-"+ str(bestFit.index(max(bestFit))+difference))
-        
+def switchSequences(seq1,seq2):
+    temp = seq1
+    seq1 = seq2
+    seq2 = temp
+    return seq1, seq2
+
 '''
     complimentSequence
     takes in a seq then finds the compliment by 
@@ -111,49 +101,33 @@ def main():
     infile1 = open('wildtype.txt', 'r')
     infile2 = open('mutantA.txt', 'r')
     
-    equalLength = True
+    seq1 = readInFile(infile1)
+    seq2 = readInFile(infile2)
 
-    #step 2 read fasta formatted sequences
-    seq1 = ""
-    infile1.readline()  # bypass > header line
-    for line in infile1:
-        line = line.replace('\n', '')
-        line = line.upper()
-        seq1 = seq1 + line
-
-    seq2 = ""
-    infile2.readline()  # bypass > header line
-    for line in infile2:
-        line = line.replace('\n', '')
-        line = line.upper()
-       
-        seq2 = seq2 + line
-    #Determine if sequences are the same length
-    if (len(seq1) != len(seq2)):
-        equalLength = False
-
-    # step 3 get format of the sequences and process sequences to
+    # step 2 get format of the sequences and process sequences to
     # correct format
     print ("This program compares DNA sequences to find mutations the first strand will " +
         "be considered the reference strand")
     print ("Enter what type of template the sequences are")
     isTemplate = input("1) For non template sequences\n2) For template sequences\n")
+
     if isTemplate == "2":
         seq1 = complimentSequence(seq1)
         seq2 = complimentSequence(seq2)
+
     print ("Enter the direction of the strand")
     direction = input("1) 5' to 3' \n2) 3' to 5'\n")
     if direction == "2":
         seq1 = seq1[::-1]
         seq2 = seq2[::-1]
     
-    # step 4 do the comparison of the sequences
-    if(equalLength is True):
+    # step 3 do the comparison of the sequences
+    if(len(seq1) == len(seq2)):
         comparison(seq1,seq2)        
-    elif (equalLength is False):
+    else:
         comparisonUnequal(seq1,seq2)
 
-    #step 5 close up the files before exiting
+    #step 4 close up the files before exiting
     infile1.close()
     infile2.close()
 main()
